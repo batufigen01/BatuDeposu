@@ -58,9 +58,9 @@ export function AddAccountModal({ onClose, onAccountAdded }: AddAccountModalProp
       if (insertError) throw insertError;
 
       onAccountAdded();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding account:', err);
-      setError(err.message || 'Hesap eklenirken bir hata oluştu');
+      setError(err instanceof Error ? err.message : 'Hesap eklenirken bir hata oluştu');
     } finally {
       setLoading(false);
     }

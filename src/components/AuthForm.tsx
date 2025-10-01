@@ -21,8 +21,8 @@ export function AuthForm() {
       } else {
         await signIn(email, password);
       }
-    } catch (err: any) {
-      setError(err.message || 'Bir hata oluştu');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
     } finally {
       setLoading(false);
     }

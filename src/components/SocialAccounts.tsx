@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,11 +23,7 @@ export function SocialAccounts() {
   const [showModal, setShowModal] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
-    loadAccounts();
-  }, [user]);
-
-  const loadAccounts = async () => {
+  const loadAccounts = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -44,7 +40,11 @@ export function SocialAccounts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
 
   const handleAccountAdded = () => {
     loadAccounts();
