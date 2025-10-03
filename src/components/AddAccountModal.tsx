@@ -33,9 +33,32 @@ export function AddAccountModal({ onClose, onAccountAdded }: AddAccountModalProp
   const [accountId, setAccountId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [useOAuth, setUseOAuth] = useState(true);
   const { user } = useAuth();
 
-  const handleConnect = async (e: React.FormEvent) => {
+  const platformOAuthMap: Record<string, string> = {
+    instagram: 'oauth-instagram',
+    facebook: 'oauth-facebook',
+    linkedin: 'oauth-linkedin',
+    twitter: 'oauth-twitter',
+  };
+
+  const handleOAuthConnect = async () => {
+    if (!selectedPlatform) return;
+
+    const oauthEndpoint = platformOAuthMap[selectedPlatform];
+    if (!oauthEndpoint) {
+      setError('Bu platform için OAuth entegrasyonu henüz hazır değil');
+      return;
+    }
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const oauthUrl = `${supabaseUrl}/functions/v1/${oauthEndpoint}/start`;
+
+    window.location.href = oauthUrl;
+  };
+
+  const handleManualConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlatform || !user) return;
 
@@ -104,7 +127,7 @@ export function AddAccountModal({ onClose, onAccountAdded }: AddAccountModalProp
               </div>
             </div>
           ) : (
-            <form onSubmit={handleConnect} className="space-y-6">
+            <div className="space-y-6">
               <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-xl">
                 <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${platforms.find(p => p.id === selectedPlatform)?.color} flex items-center justify-center text-white font-bold`}>
                   {platforms.find(p => p.id === selectedPlatform)?.name.charAt(0)}
@@ -128,13 +151,78 @@ export function AddAccountModal({ onClose, onAccountAdded }: AddAccountModalProp
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
-                  <strong>Demo Mod:</strong> Şu anda OAuth entegrasyonu aktif değil.
-                  Hesap bilgilerini manuel olarak girebilirsiniz. Gerçek entegrasyon için
-                  backend OAuth akışı kurulması gerekiyor.
-                </p>
+              <div className="flex space-x-2 border-b border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setUseOAuth(true)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    useOAuth
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  OAuth Bağlantısı
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseOAuth(false)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    !useOAuth
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Manuel Giriş
+                </button>
               </div>
+
+              {useOAuth ? (
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm text-green-900">
+                      <strong>Güvenli OAuth Bağlantısı:</strong> Hesabınızı resmi OAuth akışı ile güvenli şekilde bağlayın.
+                      Kimlik bilgilerinizi paylaşmanıza gerek yok.
+                    </p>
+                  </div>
+
+                  {platformOAuthMap[selectedPlatform] ? (
+                    <button
+                      type="button"
+                      onClick={handleOAuthConnect}
+                      className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {platforms.find(p => p.id === selectedPlatform)?.name} ile Bağlan
+                    </button>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-sm text-yellow-900">
+                        Bu platform için OAuth entegrasyonu yakında eklenecek. Şimdilik manuel giriş kullanabilirsiniz.
+                      </p>
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                  >
+                    İptal
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleManualConnect} className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-900">
+                      <strong>Manuel Giriş:</strong> Hesap bilgilerini manuel olarak girebilirsiniz.
+                      Bu mod test amaçlıdır.
+                    </p>
+                  </div>
 
               <div>
                 <label htmlFor="accountName" className="block text-sm font-medium text-slate-700 mb-2">
@@ -171,23 +259,25 @@ export function AddAccountModal({ onClose, onAccountAdded }: AddAccountModalProp
                 </div>
               )}
 
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  İptal
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Bağlanıyor...' : 'Hesabı Bağla'}
-                </button>
-              </div>
-            </form>
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? 'Bağlanıyor...' : 'Hesabı Bağla'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           )}
         </div>
       </div>
